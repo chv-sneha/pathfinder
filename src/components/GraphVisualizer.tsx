@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Play, RotateCcw, Pause } from "lucide-react";
+import { Play, RotateCcw, Pause, Code } from "lucide-react";
+import { CodeViewer } from "./CodeViewer";
 
 interface Node {
   id: number;
@@ -45,6 +46,9 @@ export const GraphVisualizer = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [shortestPaths, setShortestPaths] = useState<number[][]>([]);
+  const [showCode, setShowCode] = useState(false);
+  const [showCustomGraph, setShowCustomGraph] = useState(false);
+  const [targetNode, setTargetNode] = useState(5);
   const animationRef = useRef<number>();
 
   useEffect(() => {
@@ -156,7 +160,6 @@ export const GraphVisualizer = () => {
     const parent = nodes.map(() => -1);
 
     for (let count = 0; count < nodes.length - 1; count++) {
-      if (!isAnimating) break;
 
       // Find minimum distance node
       let minDist = Infinity;
@@ -213,21 +216,15 @@ export const GraphVisualizer = () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
-    // Build paths
-    const paths: number[][] = [];
-    for (let i = 0; i < nodes.length; i++) {
-      if (i !== sourceNode) {
-        const path: number[] = [];
-        let current = i;
-        while (current !== -1) {
-          path.unshift(current);
-          current = parent[current];
-        }
-        paths.push(path);
-      }
+    // Build path to target node only
+    const path: number[] = [];
+    let current = targetNode;
+    while (current !== -1) {
+      path.unshift(current);
+      current = parent[current];
     }
 
-    setShortestPaths(paths);
+    setShortestPaths([path]);
     setIsAnimating(false);
     setCurrentNode(null);
   };
@@ -241,8 +238,133 @@ export const GraphVisualizer = () => {
     initializeGraph();
   };
 
+  const addCustomNode = (nodeId: number) => {
+    const x = 150 + (nodeId % 3) * 200;
+    const y = 100 + Math.floor(nodeId / 3) * 150;
+    
+    setNodes(prev => [...prev, {
+      id: nodeId,
+      x,
+      y,
+      distance: nodeId === sourceNode ? 0 : Infinity,
+      visited: false,
+      parent: null
+    }]);
+  };
+
+  const addCustomEdge = (from: number, to: number, weight: number) => {
+    const fromExists = nodes.find(n => n.id === from);
+    const toExists = nodes.find(n => n.id === to);
+    
+    if (fromExists && toExists) {
+      setEdges(prev => [...prev, { from, to, weight }]);
+    }
+  };
+
+  const clearCustomGraph = () => {
+    setNodes([]);
+    setEdges([]);
+    setShortestPaths([]);
+    setCurrentNode(null);
+  };
+
   return (
     <div className="w-full space-y-6">
+      {showCustomGraph && (
+        <Card className="p-6 bg-card border-border">
+          <h3 className="text-lg font-bold mb-4 text-foreground">Create Your Own Graph</h3>
+          <div className="space-y-6">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 className="font-semibold text-blue-800 mb-2">How to use:</h4>
+              <ol className="text-sm text-blue-700 space-y-1">
+                <li>1. First add nodes: Type 0, click Add, type 1, click Add, etc.</li>
+                <li>2. Then connect them: From=0, To=1, Distance=5, click Add</li>
+                <li>3. Choose Source and Target nodes below</li>
+                <li>4. Click "Run Algorithm" to find shortest path</li>
+              </ol>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <h4 className="text-md font-semibold text-primary">Step 1: Add Nodes</h4>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="number"
+                    placeholder="0"
+                    className="bg-card border border-border rounded px-3 py-2 text-sm w-16"
+                    id="nodeInput"
+                  />
+                  <Button
+                    onClick={() => {
+                      const input = document.getElementById('nodeInput') as HTMLInputElement;
+                      const nodeId = parseInt(input.value);
+                      if (!isNaN(nodeId) && !nodes.find(n => n.id === nodeId)) {
+                        addCustomNode(nodeId);
+                        input.value = '';
+                      }
+                    }}
+                    size="sm"
+                  >
+                    Add Node
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500">Example: Type 0, click Add, then 1, click Add, etc.</p>
+              </div>
+              
+              <div className="space-y-3">
+                <h4 className="text-md font-semibold text-secondary">Step 2: Connect Nodes</h4>
+                <div className="flex gap-2 items-center flex-wrap">
+                  <input
+                    type="number"
+                    placeholder="From"
+                    className="bg-card border border-border rounded px-3 py-2 text-sm w-16"
+                    id="fromNode"
+                  />
+                  <span className="text-xs">→</span>
+                  <input
+                    type="number"
+                    placeholder="To"
+                    className="bg-card border border-border rounded px-3 py-2 text-sm w-16"
+                    id="toNode"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Distance"
+                    className="bg-card border border-border rounded px-3 py-2 text-sm w-20"
+                    id="weight"
+                  />
+                  <Button
+                    onClick={() => {
+                      const from = parseInt((document.getElementById('fromNode') as HTMLInputElement).value);
+                      const to = parseInt((document.getElementById('toNode') as HTMLInputElement).value);
+                      const weight = parseInt((document.getElementById('weight') as HTMLInputElement).value);
+                      if (!isNaN(from) && !isNaN(to) && !isNaN(weight)) {
+                        addCustomEdge(from, to, weight);
+                        (document.getElementById('fromNode') as HTMLInputElement).value = '';
+                        (document.getElementById('toNode') as HTMLInputElement).value = '';
+                        (document.getElementById('weight') as HTMLInputElement).value = '';
+                      }
+                    }}
+                    size="sm"
+                  >
+                    Add Edge
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500">Example: From=0, To=1, Distance=5, click Add</p>
+                <Button
+                  onClick={clearCustomGraph}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs mt-2"
+                >
+                  Start Over
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div className="flex gap-4 items-center justify-center flex-wrap">
         <Button
           onClick={runDijkstra}
@@ -260,8 +382,24 @@ export const GraphVisualizer = () => {
           <RotateCcw className="mr-2 h-4 w-4" />
           Reset
         </Button>
+        <Button
+          onClick={() => setShowCode(!showCode)}
+          variant="outline"
+          className="border-border hover:bg-muted"
+        >
+          <Code className="mr-2 h-4 w-4" />
+          {showCode ? 'Hide Code' : 'View Code'}
+        </Button>
+        <Button
+          onClick={() => setShowCustomGraph(!showCustomGraph)}
+          variant="outline"
+          className="border-border hover:bg-muted"
+        >
+          <Play className="mr-2 h-4 w-4" />
+          {showCustomGraph ? 'Hide Builder' : 'Custom Graph'}
+        </Button>
         <div className="flex gap-2 items-center">
-          <span className="text-sm text-muted-foreground">Source Node:</span>
+          <span className="text-sm text-muted-foreground">Source:</span>
           <select
             value={sourceNode}
             onChange={(e) => {
@@ -273,7 +411,22 @@ export const GraphVisualizer = () => {
           >
             {nodes.map((node) => (
               <option key={node.id} value={node.id}>
-                Node {node.id}
+                {node.id}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex gap-2 items-center">
+          <span className="text-sm text-muted-foreground">Target:</span>
+          <select
+            value={targetNode}
+            onChange={(e) => setTargetNode(Number(e.target.value))}
+            disabled={isAnimating}
+            className="bg-card border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {nodes.map((node) => (
+              <option key={node.id} value={node.id}>
+                {node.id}
               </option>
             ))}
           </select>
@@ -337,6 +490,14 @@ export const GraphVisualizer = () => {
           </div>
         </Card>
       </div>
+      
+      {showCode && (
+        <div className="mt-6 w-full">
+          <CodeViewer />
+        </div>
+      )}
+      
+
     </div>
   );
 };

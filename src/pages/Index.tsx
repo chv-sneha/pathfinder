@@ -1,27 +1,59 @@
 import { GraphVisualizer } from "@/components/GraphVisualizer";
+import { GoogleMapsSimulation } from "@/components/GoogleMapsSimulation";
 import { Card } from "@/components/ui/card";
-import { Zap, Navigation, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Zap, Navigation, AlertCircle, Play, Map } from "lucide-react";
+import { useState, useEffect } from "react";
+import { apiService } from "@/services/api";
 
 const Index = () => {
+  const [backendStatus, setBackendStatus] = useState<string>('checking');
+  const [apiData, setApiData] = useState<any>(null);
+
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const health = await apiService.checkHealth();
+        setBackendStatus('connected');
+        const graph = await apiService.getGraph();
+        const nodes = await apiService.getNodes();
+        setApiData({ graph, nodes });
+      } catch (error) {
+        setBackendStatus('disconnected');
+      }
+    };
+    checkBackend();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-card">
       {/* Hero Section */}
-      <header className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 blur-3xl" />
-        <div className="relative max-w-7xl mx-auto px-6 py-16 lg:py-24">
-          <div className="text-center space-y-6 animate-slide-in">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30 text-primary text-sm font-mono glow-primary">
+      <header className="relative overflow-hidden border-b border-border h-screen">
+        <video 
+          className="absolute inset-0 w-full h-full object-cover" 
+          autoPlay 
+          muted 
+          loop 
+          playsInline
+        >
+          <source src="/video.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="relative z-10 flex items-center justify-center h-full">
+          <div className="text-center space-y-8 animate-slide-in px-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30 text-primary text-sm font-mono glow-primary backdrop-blur-sm">
               <Zap className="h-4 w-4" />
               <span>Smart City Emergency Routing</span>
             </div>
             <h1 className="text-5xl lg:text-7xl font-bold tracking-tight">
-              <span className="text-foreground">Dijkstra's</span>
+              <span className="text-white">Dijkstra's</span>
               <br />
-              <span className="bg-gradient-to-r from-primary via-tech-blue to-secondary bg-clip-text text-transparent">
+              <span className="text-blue-400" style={{textShadow: '0 0 8px #60a5fa, 1px 1px 0 #1e40af, -1px -1px 0 #1e40af, 1px -1px 0 #1e40af, -1px 1px 0 #1e40af'}}>
                 Shortest Path
               </span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl text-gray-200 max-w-2xl mx-auto leading-relaxed">
               Real-time optimal route calculation for emergency vehicles using advanced graph algorithms
             </p>
           </div>
@@ -30,60 +62,72 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-12 space-y-12">
-        {/* Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-6 bg-card border-border hover:border-primary/50 transition-all duration-300 group">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-emergency/20 border border-emergency/30 group-hover:glow-emergency transition-all">
-                <AlertCircle className="h-6 w-6 text-emergency" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-2 text-foreground">Emergency Response</h3>
-                <p className="text-sm text-muted-foreground">
-                  Minimize response time for ambulances, fire engines, and police vehicles
-                </p>
-              </div>
+        {/* Algorithm Explanation */}
+        <Card className="p-8 bg-card border-border">
+          <h2 className="text-2xl font-bold mb-6 text-foreground">Dijkstra's Algorithm</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-primary">Algorithm Concept</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Dijkstra's algorithm finds the shortest path between nodes in a weighted graph. It works by maintaining a set of unvisited nodes and continuously selecting the node with the minimum distance, then updating distances to its neighbors.
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                The algorithm guarantees optimal solutions for graphs with non-negative edge weights, making it perfect for routing applications like GPS navigation and emergency response systems.
+              </p>
             </div>
-          </Card>
-
-          <Card className="p-6 bg-card border-border hover:border-primary/50 transition-all duration-300 group">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-primary/20 border border-primary/30 group-hover:glow-primary transition-all">
-                <Navigation className="h-6 w-6 text-primary" />
+            
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-secondary">Efficiency & Complexity</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between p-3 rounded bg-muted/30">
+                  <span className="text-foreground font-medium">Time Complexity:</span>
+                  <span className="text-primary font-mono">O((V + E) log V)</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded bg-muted/30">
+                  <span className="text-foreground font-medium">Space Complexity:</span>
+                  <span className="text-primary font-mono">O(V)</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded bg-muted/30">
+                  <span className="text-foreground font-medium">Best for:</span>
+                  <span className="text-secondary">Dense graphs</span>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-2 text-foreground">Optimal Routing</h3>
-                <p className="text-sm text-muted-foreground">
-                  Calculate shortest paths dynamically based on real-time traffic conditions
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                V = vertices (nodes), E = edges (connections)
+              </p>
             </div>
-          </Card>
+          </div>
+        </Card>
 
-          <Card className="p-6 bg-card border-border hover:border-primary/50 transition-all duration-300 group">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-accent/20 border border-accent/30 group-hover:glow-accent transition-all">
-                <Zap className="h-6 w-6 text-accent" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-2 text-foreground">Efficient Algorithm</h3>
-                <p className="text-sm text-muted-foreground">
-                  O(E log V) time complexity with priority queue implementation
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Graph Visualizer */}
+        {/* Interactive Visualizations */}
         <section className="space-y-6">
           <div className="text-center space-y-3">
-            <h2 className="text-3xl font-bold text-foreground">Interactive Visualization</h2>
+            <h2 className="text-3xl font-bold text-foreground">Emergency Response Simulation</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Watch the algorithm in action as it explores the graph and finds optimal paths
+              See how Dijkstra's algorithm finds the fastest route for ambulances rushing patients to the hospital
             </p>
           </div>
-          <GraphVisualizer />
+          
+          <Tabs defaultValue="algorithm" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
+              <TabsTrigger value="algorithm" className="flex items-center gap-2">
+                <Play className="h-4 w-4" />
+                Algorithm
+              </TabsTrigger>
+              <TabsTrigger value="simulation" className="flex items-center gap-2">
+                <Map className="h-4 w-4" />
+                Ambulance Route
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="algorithm" className="mt-6">
+              <GraphVisualizer />
+            </TabsContent>
+            
+            <TabsContent value="simulation" className="mt-6">
+              <GoogleMapsSimulation />
+            </TabsContent>
+          </Tabs>
         </section>
 
         {/* Algorithm Info */}
